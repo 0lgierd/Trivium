@@ -1,19 +1,29 @@
+//state = 0x95a842dd700aa53b24d980045529fe83d8ad4216eba44000000000000000000000000003 : State
+type State =  0
+
 cycle: [288] -> [288]
 cycle state = [t3] # (state @@ [0..91]) # [t1] # (state @@ [93..175]) # [t2] # (state @@ [177..286])
-    where t1 = state@65  ^ state@92  ^ state@90  && state@91  ^ state@170
-          t2 = state@161 ^ state@176 ^ state@174 && state@175 ^ state@263 
-          t3 = state@242 ^ state@287 ^ state@285 && state@286 ^ state@68
+    where t1 = state@65  ^ state@92  ^ (state@90  && state@91)  ^ state@170
+          t2 = state@161 ^ state@176 ^ (state@174 && state@175) ^ state@263 
+          t3 = state@242 ^ state@287 ^ (state@285 && state@286)^ state@68
+
 
 getBit: [288] -> Bit
-getBit state = state@65 ^ state@92 ^ state@161 ^ state@176 ^ state@242 ^ state@287   
+getBit state = state@65 ^ state@92 ^ state@161 ^ state@176 ^ state@242 ^ state@287
+
+stream: {n} (n<=2^^64) => [288] -> ([n]Bit, [288])
+stream st =  ([getBit State | State <-  take (iterate cycle st ) : [n][288]], last( take (iterate cycle st ) : [n+1][288]))
+   
 
 init: [80] -> [80] -> [288]
-init key iv = last (take (iterate cycle first) : [1153][288])
-    where first = (key # (0 :[13] ) # iv # (0 :[4]) # (0 :[108]) #(~0 :[3]))
+init key iv = last(take (iterate cycle first) : [1153][288]) 
+    where first = (key # (zero :[13] ) # iv # (zero :[4]) # (zero :[108]) #(~zero :[3]))
   
 encrypt: {n} (n<=2^^64) => [n]-> [288] -> ([n],[288])
-encrypt plaintext state = ([getBit state | state <- tail (take (iterate cycle state ) : [n+1][288])] ^ plaintext, last (take (iterate cycle state ) : [n+1][288]))
+encrypt plaintext state = ([getBit State | State <- take (iterate cycle state)  : [n][288]] ^ plaintext, last (take (iterate cycle state ) : [n+1][288]))
     
 decrypt: {n} (n<=2^^64) => [n]-> [288] -> ([n],[288])
 decrypt = encrypt
 
+type k = 0x00000000000000000000
+type i = 0x00000000000000000000
